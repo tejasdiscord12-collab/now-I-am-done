@@ -114,70 +114,30 @@ module.exports = {
 
                 if (ticket.closed) return interaction.reply({ content: 'Ticket is already closed.', ephemeral: true });
 
-                await interaction.reply({ content: 'Generating transcript and closing ticket...' });
+                // Show modal to ask for close reason
+                const { ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
-                // Generate Transcript
-                try {
-                    const transcriptChannel = guild.channels.cache.find(ch => ch.name === 'transcripts');
+                const modal = new ModalBuilder()
+                    .setCustomId('close_ticket_modal')
+                    .setTitle('Close Ticket');
 
-                    if (transcriptChannel) {
-                        // Fetch all messages
-                        const messages = await channel.messages.fetch({ limit: 100 });
-                        const sortedMessages = Array.from(messages.values()).reverse();
+                const reasonInput = new TextInputBuilder()
+                    .setCustomId('close_reason')
+                    .setLabel('Reason for closing')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setPlaceholder('Enter the reason for closing this ticket...')
+                    .setRequired(true)
+                    .setMinLength(5)
+                    .setMaxLength(500);
 
-                        // Create transcript text
-                        let transcript = `# Ticket Transcript\n`;
-                        transcript += `**Ticket Type:** ${ticket.ticketType || 'General'}\n`;
-                        transcript += `**Created by:** <@${ticket.userId}>\n`;
-                        transcript += `**Claimed by:** ${ticket.claimedBy ? `<@${ticket.claimedBy}>` : 'Unclaimed'}\n`;
-                        transcript += `**Closed by:** ${member}\n`;
-                        transcript += `**Created at:** <t:${Math.floor(new Date(ticket.createdAt).getTime() / 1000)}:F>\n`;
-                        transcript += `**Closed at:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n`;
-                        transcript += `## Messages:\n\n`;
+                const actionRow = new ActionRowBuilder().addComponents(reasonInput);
+                modal.addComponents(actionRow);
 
-                        for (const msg of sortedMessages) {
-                            const timestamp = `<t:${Math.floor(msg.createdTimestamp / 1000)}:T>`;
-                            transcript += `**${msg.author.tag}** ${timestamp}\n`;
-                            if (msg.content) transcript += `${msg.content}\n`;
-                            if (msg.attachments.size > 0) {
-                                msg.attachments.forEach(att => {
-                                    transcript += `📎 [${att.name}](${att.url})\n`;
-                                });
-                            }
-                            transcript += `\n`;
-                        }
+                await interaction.showModal(modal);
+            }
 
-                        // Split transcript if too long (Discord limit is 2000 chars per message)
-                        const chunks = transcript.match(/[\s\S]{1,1900}/g) || [];
-
-                        const transcriptEmbed = new EmbedBuilder()
-                            .setTitle(`🎫 Ticket Transcript - ${channel.name}`)
-                            .setDescription(`Ticket closed by ${member}`)
-                            .setColor(config.colors.ticket)
-                            .addFields(
-                                { name: 'User', value: `<@${ticket.userId}>`, inline: true },
-                                { name: 'Type', value: ticket.ticketType || 'General', inline: true },
-                                { name: 'Messages', value: `${sortedMessages.length}`, inline: true }
-                            )
-                            .setTimestamp();
-
-                        await transcriptChannel.send({ embeds: [transcriptEmbed] });
-
-                        for (const chunk of chunks) {
-                            await transcriptChannel.send({ content: `\`\`\`md\n${chunk}\n\`\`\`` });
-                        }
-                    }
-                } catch (error) {
-                    logger.error('Error generating transcript:', error);
-                }
-
-                // Mark as closed in DB
-                ticket.closed = true;
-                await ticket.save();
-
-                setTimeout(async () => {
-                    await channel.delete();
-                }, 3000);
+            if (customId === 'close_ticket_modal') {
+                // This is handled in the modal submit handler below
             }
 
             if (customId === 'claim_ticket') {
@@ -190,6 +150,67 @@ module.exports = {
                 await ticket.save();
 
                 await interaction.reply({ content: `Ticket claimed by ${member}!` });
+            }
+        }
+
+        // Handle Modal Submits (Close Ticket with Reason)
+        if (interaction.isModalSubmit()) {
+            const { customId, guild, member, channel } = interaction;
+            const Ticket = require('../models/Ticket');
+            const config = require('../config');
+            const { EmbedBuilder } = require('discord.js');
+
+            if (customId === 'close_ticket_modal') {
+                const ticket = await Ticket.findOne({ channelId: channel.id });
+                if (!ticket) return interaction.reply({ content: 'This is not a ticket channel.', ephemeral: true });
+
+                const closeReason = interaction.fields.getTextInputValue('close_reason');
+
+                await interaction.reply({ content: 'Generating transcript and closing ticket...' });
+
+                // Generate Simplified Transcript
+                try {
+                    const transcriptChannel = guild.channels.cache.find(ch => ch.name === 'transcripts');
+
+                    if (transcriptChannel) {
+                        // Fetch all messages to count unique participants
+                        const messages = await channel.messages.fetch({ limit: 100 });
+                        const uniqueParticipants = new Set();
+
+                        messages.forEach(msg => {
+                            if (!msg.author.bot) {
+                                uniqueParticipants.add(msg.author.id);
+                            }
+                        });
+
+                        const transcriptEmbed = new EmbedBuilder()
+                            .setTitle(`🎫 Ticket Transcript - ${channel.name}`)
+                            .setColor(config.colors.ticket)
+                            .addFields(
+                                { name: '👤 Created By', value: `<@${ticket.userId}>`, inline: true },
+                                { name: '👥 Participants', value: `${uniqueParticipants.size}`, inline: true },
+                                { name: '🔒 Closed By', value: `${member}`, inline: true },
+                                { name: '📝 Reason', value: closeReason, inline: false }
+                            )
+                            .setTimestamp()
+                            .setFooter({ text: 'Team Desact' });
+
+                        await transcriptChannel.send({ embeds: [transcriptEmbed] });
+                    }
+                } catch (error) {
+                    logger.error('Error generating transcript:', error);
+                }
+
+                // Mark as closed in DB
+                ticket.closed = true;
+                ticket.closeReason = closeReason;
+                ticket.closedBy = member.id;
+                ticket.closedAt = new Date().toISOString();
+                await ticket.save();
+
+                setTimeout(async () => {
+                    await channel.delete();
+                }, 3000);
             }
         }
     },
