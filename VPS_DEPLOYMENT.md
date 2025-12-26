@@ -10,8 +10,8 @@ ssh your_username@your_vps_ip
 ### Step 2: Clone Repository
 ```bash
 cd ~
-git clone https://github.com/tejasdiscord12-collab/now-I-am-done.git
-cd now-I-am-done
+git clone https://github.com/tejasdiscord12-collab/now-I-am-done.git desactbot
+cd desactbot
 ```
 
 ### Step 3: Install Dependencies
@@ -70,7 +70,7 @@ pm2 delete desactbot
 ## Update Bot (Pull Latest Changes)
 
 ```bash
-cd ~/now-I-am-done
+cd ~/desactbot
 git pull origin main
 npm install
 pm2 restart desactbot
