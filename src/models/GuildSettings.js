@@ -6,6 +6,7 @@ const store = new JsonStore('guildsettings');
 class GuildSettings extends BaseModel {
     constructor(data) {
         if (!data.welcomeChannelId) data.welcomeChannelId = null;
+        if (!data.reviewChannelId) data.reviewChannelId = null;
         super(store, data);
     }
 

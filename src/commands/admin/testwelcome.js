@@ -23,7 +23,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setTitle(`Welcome to ${interaction.guild.name}!`)
-            .setDescription(`Hello ${interaction.user}, welcome to the server!\n\nUser Count: **${interaction.guild.memberCount}**\nInvited By: **Test Inviter**`)
+            .setDescription(`Hello ${interaction.user}, welcome to the server!\n\nUser Count: **${interaction.guild.memberCount}**`)
             .setThumbnail(interaction.user.displayAvatarURL())
             .setColor(config.colors.success);
 

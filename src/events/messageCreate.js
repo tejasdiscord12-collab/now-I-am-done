@@ -120,38 +120,6 @@ module.exports = {
         }
 
 
-        // 4. Text Commands (-i for invites)
-        if (content === '-i') {
-            const User = require('../models/User');
-            let userData = await User.findOne({ guildId: message.guild.id, userId: message.author.id });
-
-            if (!userData) {
-                userData = new User({
-                    guildId: message.guild.id,
-                    userId: message.author.id,
-                    invites: 0,
-                    real: 0,
-                    fake: 0,
-                    left: 0
-                });
-            }
-
-            const embed = new EmbedBuilder()
-                .setTitle('📊 Invite Stats')
-                .setDescription(`**${message.author.username}**'s Invite Statistics`)
-                .setColor(config.colors.info)
-                .setThumbnail(message.author.displayAvatarURL())
-                .addFields(
-                    { name: '✅ Real', value: `${userData.real || 0}`, inline: true },
-                    { name: '❌ Fake', value: `${userData.fake || 0}`, inline: true },
-                    { name: '👋 Left', value: `${userData.left || 0}`, inline: true },
-                    { name: '📈 Total', value: `${userData.invites || 0}`, inline: false }
-                )
-                .setFooter({ text: `Requested by ${message.author.username}` })
-                .setTimestamp();
-
-            return message.reply({ embeds: [embed] });
-        }
 
         // 5. Custom Commands
         const customCmd = await CustomCommand.findOne({ guildId: message.guild.id, trigger: content });
