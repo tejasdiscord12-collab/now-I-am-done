@@ -51,14 +51,15 @@ async function loadHandlers(client) {
     // Register Slash Commands
     if (config.token && config.clientId) {
         const rest = new REST().setToken(config.token);
+        const guildId = '1453861508256764007'; // Your server ID
         (async () => {
             try {
-                logger.info('Started refreshing application (/) commands (Global).');
+                logger.info('Started refreshing application (/) commands (Guild-specific).');
                 await rest.put(
-                    Routes.applicationCommands(config.clientId),
+                    Routes.applicationGuildCommands(config.clientId, guildId),
                     { body: commands },
                 );
-                logger.success('Successfully reloaded application (/) commands (Global).');
+                logger.success('Successfully reloaded application (/) commands (Guild-specific).');
             } catch (error) {
                 logger.error('Error reloading commands', error);
             }
