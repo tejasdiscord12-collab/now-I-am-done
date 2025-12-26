@@ -7,6 +7,8 @@ class GuildSettings extends BaseModel {
     constructor(data) {
         if (!data.welcomeChannelId) data.welcomeChannelId = null;
         if (!data.reviewChannelId) data.reviewChannelId = null;
+        if (!data.welcomeMessage) data.welcomeMessage = null;
+        if (data.inviteTrackingEnabled === undefined) data.inviteTrackingEnabled = true;
         super(store, data);
     }
 

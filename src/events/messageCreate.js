@@ -121,6 +121,26 @@ module.exports = {
 
 
 
+        // 4. Prefix Commands
+        if (content.startsWith('-')) {
+            const args = content.slice(1).trim().split(/ +/);
+            const commandName = args.shift().toLowerCase();
+
+            if (commandName === 'i') {
+                const targetUser = message.mentions.users.first() || message.author;
+                const { getInviteStatsEmbed } = require('../utils/inviteUtils');
+
+                try {
+                    const embed = await getInviteStatsEmbed(targetUser, message.guild, message.author);
+                    await message.channel.send({ embeds: [embed] });
+                    return;
+                } catch (error) {
+                    logger.error(`Error in -i command: ${error.message}`);
+                    await message.channel.send('❌ Failed to fetch invite stats.');
+                }
+            }
+        }
+
         // 5. Custom Commands
         const customCmd = await CustomCommand.findOne({ guildId: message.guild.id, trigger: content });
         if (customCmd) {
